@@ -1,0 +1,3 @@
+com/example/checkout/controller/CheckoutControllerIT.class
+com/example/checkout/service/DummyPaymentGatewayTest.class
+com/example/checkout/service/CheckoutServiceTest.class
