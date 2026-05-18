@@ -34,3 +34,50 @@ logging:
     level: "%5p [%X{cartId},%X{idempotencyKey},%X{orderId}]"
   level:
     com.example.checkout: INFO
+
+# -----------------------------------------------------------------------------
+# Dummy payment gateway — test card rules.
+# Bound to com.example.checkout.config.TestCardProperties.
+#
+# Adding a new scenario: append a `- number: …` entry below. No Java needed.
+# Allowed `outcome` values: APPROVE | DECLINE | TIMEOUT.
+# For DECLINE, set `reason` (string surfaced to the client).
+# Unknown card numbers fall through to `default-decline-reason`.
+# -----------------------------------------------------------------------------
+gateway:
+  test-cards:
+    timeout-threshold-ms: 5000
+    default-decline-reason: do_not_honor
+    cards:
+      - number: "4111111111111111"
+        outcome: APPROVE
+        label: "Visa — always approves"
+      - number: "4000000000000002"
+        outcome: DECLINE
+        reason: insufficient_funds
+        label: "Visa — insufficient funds"
+      - number: "4000000000000069"
+        outcome: TIMEOUT
+        label: "Visa — gateway timeout simulator"
+      - number: "5555555555554444"
+        outcome: APPROVE
+        label: "Mastercard — always approves"
+      - number: "378282246310005"
+        outcome: APPROVE
+        label: "Amex — always approves"
+      - number: "4000000000000341"
+        outcome: DECLINE
+        reason: expired_card
+        label: "Visa — expired card"
+      - number: "4000000000000127"
+        outcome: DECLINE
+        reason: incorrect_cvc
+        label: "Visa — incorrect CVC"
+      - number: "4000000000000119"
+        outcome: DECLINE
+        reason: processing_error
+        label: "Visa — processing error"
+      - number: "4100000000000019"
+        outcome: DECLINE
+        reason: fraudulent
+        label: "Visa — fraud suspected"

@@ -1,20 +1,53 @@
 package com.example.checkout.service;
 
+import com.example.checkout.config.TestCardProperties;
+import com.example.checkout.config.TestCardProperties.Card;
+import com.example.checkout.config.TestCardProperties.Outcome;
 import com.example.checkout.exception.GatewayTimeoutException;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * Pure-Java unit tests — no Spring context. Properties are constructed
+ * by hand so each test owns its scenario.
+ */
 class DummyPaymentGatewayTest {
 
-    private final DummyPaymentGateway gateway = new DummyPaymentGateway();
+    /** Mirrors the production YAML so the test reflects real behaviour. */
+    private static DummyPaymentGateway gatewayWithDefaults() {
+        TestCardProperties props = new TestCardProperties();
+        props.setTimeoutThresholdMs(5_000L);
+        props.setDefaultDeclineReason("do_not_honor");
+        props.setCards(List.of(
+                card("4111111111111111", Outcome.APPROVE, null),
+                card("4000000000000002", Outcome.DECLINE, "insufficient_funds"),
+                card("4000000000000069", Outcome.TIMEOUT, null),
+                card("5555555555554444", Outcome.APPROVE, null),
+                card("378282246310005",  Outcome.APPROVE, null),
+                card("4000000000000341", Outcome.DECLINE, "expired_card"),
+                card("4000000000000127", Outcome.DECLINE, "incorrect_cvc"),
+                card("4000000000000119", Outcome.DECLINE, "processing_error"),
+                card("4100000000000019", Outcome.DECLINE, "fraudulent")
+        ));
+        return new DummyPaymentGateway(props);
+    }
+
+    private static Card card(String number, Outcome outcome, String reason) {
+        Card c = new Card();
+        c.setNumber(number);
+        c.setOutcome(outcome);
+        c.setReason(reason);
+        return c;
+    }
 
     @Test
     void approveCardReturnsApproved() {
-        var result = gateway.charge(BigDecimal.TEN, "INR",
+        var result = gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
                 new PaymentGateway.CardDetails("4111111111111111", "12/29", "123", "X"));
 
         assertThat(result.status()).isEqualTo(PaymentGateway.PaymentResult.Status.APPROVED);
@@ -23,7 +56,7 @@ class DummyPaymentGatewayTest {
 
     @Test
     void declineCardReturnsInsufficientFunds() {
-        var result = gateway.charge(BigDecimal.TEN, "INR",
+        var result = gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
                 new PaymentGateway.CardDetails("4000000000000002", "12/29", "123", "X"));
 
         assertThat(result.status()).isEqualTo(PaymentGateway.PaymentResult.Status.DECLINED);
@@ -31,21 +64,79 @@ class DummyPaymentGatewayTest {
     }
 
     @Test
-    void unknownCardIsDoNotHonor() {
-        var result = gateway.charge(BigDecimal.TEN, "INR",
+    void unknownCardFallsBackToDefaultDecline() {
+        var result = gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
                 new PaymentGateway.CardDetails("9999888877776666", "12/29", "123", "X"));
 
         assertThat(result.declineReason()).isEqualTo("do_not_honor");
     }
 
-    /**
-     * The timeout test is *not* run by default because it sleeps >5 s.
-     * Enable in CI nightly job. Kept here to show how to test the path.
-     */
+    @Test
+    void declineWithoutExplicitReasonFallsBackToDefault() {
+        TestCardProperties props = new TestCardProperties();
+        props.setDefaultDeclineReason("custom_default");
+        props.setCards(List.of(card("5555555555554444", Outcome.DECLINE, null)));
+        DummyPaymentGateway gateway = new DummyPaymentGateway(props);
+
+        var result = gateway.charge(BigDecimal.TEN, "INR",
+                new PaymentGateway.CardDetails("5555555555554444", "12/29", "123", "X"));
+
+        assertThat(result.declineReason()).isEqualTo("custom_default");
+    }
+
+    @Test
+    void mastercardApproveReturnsApproved() {
+        var result = gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
+                new PaymentGateway.CardDetails("5555555555554444", "12/29", "123", "X"));
+
+        assertThat(result.status()).isEqualTo(PaymentGateway.PaymentResult.Status.APPROVED);
+    }
+
+    @Test
+    void amexApproveReturnsApproved() {
+        var result = gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
+                new PaymentGateway.CardDetails("378282246310005", "12/29", "1234", "X"));
+
+        assertThat(result.status()).isEqualTo(PaymentGateway.PaymentResult.Status.APPROVED);
+    }
+
+    @Test
+    void expiredCardReturnsExpiredCard() {
+        var result = gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
+                new PaymentGateway.CardDetails("4000000000000341", "12/29", "123", "X"));
+
+        assertThat(result.declineReason()).isEqualTo("expired_card");
+    }
+
+    @Test
+    void incorrectCvcCardReturnsIncorrectCvc() {
+        var result = gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
+                new PaymentGateway.CardDetails("4000000000000127", "12/29", "123", "X"));
+
+        assertThat(result.declineReason()).isEqualTo("incorrect_cvc");
+    }
+
+    @Test
+    void processingErrorCardReturnsProcessingError() {
+        var result = gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
+                new PaymentGateway.CardDetails("4000000000000119", "12/29", "123", "X"));
+
+        assertThat(result.declineReason()).isEqualTo("processing_error");
+    }
+
+    @Test
+    void fraudulentCardReturnsFraudulent() {
+        var result = gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
+                new PaymentGateway.CardDetails("4100000000000019", "12/29", "123", "X"));
+
+        assertThat(result.declineReason()).isEqualTo("fraudulent");
+    }
+
+    /** Slow — runs only in nightly CI. */
     @org.junit.jupiter.api.Disabled("slow — runs in nightly CI")
     @Test
     void timeoutCardThrows() {
-        assertThatThrownBy(() -> gateway.charge(BigDecimal.TEN, "INR",
+        assertThatThrownBy(() -> gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
                 new PaymentGateway.CardDetails("4000000000000069", "12/29", "123", "X")))
                 .isInstanceOf(GatewayTimeoutException.class);
     }

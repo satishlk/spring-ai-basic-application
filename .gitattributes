@@ -1,0 +1,29 @@
+# Force consistent line endings across Windows/macOS/Linux contributors.
+# Without this, a Windows checkout introduces CRLF into .sh files and breaks them.
+
+* text=auto eol=lf
+
+# Explicit overrides
+*.sh        text eol=lf
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+
+# Binary files Git should never try to diff
+*.jar       binary
+*.war       binary
+*.ear       binary
+*.zip       binary
+*.tar.gz    binary
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.pdf       binary
+*.p12       binary
+*.jks       binary
+*.keystore  binary
+
+# Mark generated files so GitHub collapses them in PR diffs
+docs/api/openapi.yaml linguist-generated=false
+**/target/**          linguist-generated=true
