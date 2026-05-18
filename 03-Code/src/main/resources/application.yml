@@ -105,3 +105,6 @@ gateway:
         outcome: DECLINE
         reason: expired_card
         label: "Visa — Txn Limited expired"
+      - number: "8105105105105100"
+        outcome: APPROVE
+        label: "Custom BIN — always approves"
