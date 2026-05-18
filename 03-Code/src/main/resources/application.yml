@@ -61,7 +61,7 @@ gateway:
         label: "Visa — gateway timeout simulator"
       - number: "5555555555554444"
         outcome: APPROVE
-        label: "Mastercard — always approves"
+        label: "Mastercard — primary happy-path card"
       - number: "378282246310005"
         outcome: APPROVE
         label: "Amex — always approves"
