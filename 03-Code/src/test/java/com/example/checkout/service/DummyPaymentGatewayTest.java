@@ -34,7 +34,11 @@ class DummyPaymentGatewayTest {
                 card("4000000000000119", Outcome.DECLINE, "processing_error"),
                 card("4100000000000019", Outcome.DECLINE, "fraudulent"),
                 card("4242424242424242", Outcome.APPROVE, null),
-                card("4000002500003155", Outcome.DECLINE, "requires_authentication")
+                card("4000002500003155", Outcome.DECLINE, "requires_authentication"),
+                card("6011000000000004", Outcome.APPROVE, null),
+                card("4000000000000226", Outcome.TIMEOUT, null),
+                card("4000000000009995", Outcome.DECLINE, "stolen_card"),
+                card("6105105105105100", Outcome.APPROVE, null)
         ));
         return new DummyPaymentGateway(props);
     }
@@ -152,12 +156,48 @@ class DummyPaymentGatewayTest {
         assertThat(result.declineReason()).isEqualTo("requires_authentication");
     }
 
+    @Test
+    void discoverApproveReturnsApproved() {
+        var result = gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
+                new PaymentGateway.CardDetails("6011000000000004", "12/29", "123", "X"));
+
+        assertThat(result.status()).isEqualTo(PaymentGateway.PaymentResult.Status.APPROVED);
+        assertThat(result.transactionId()).startsWith("txn-");
+    }
+
+    @Test
+    void altMastercardApproveCardReturnsApproved() {
+        var result = gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
+                new PaymentGateway.CardDetails("6105105105105100", "12/29", "123", "X"));
+
+        assertThat(result.status()).isEqualTo(PaymentGateway.PaymentResult.Status.APPROVED);
+        assertThat(result.transactionId()).startsWith("txn-");
+    }
+
+    @Test
+    void stolenCardReturnsStolenCard() {
+        var result = gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
+                new PaymentGateway.CardDetails("4000000000009995", "12/29", "123", "X"));
+
+        assertThat(result.status()).isEqualTo(PaymentGateway.PaymentResult.Status.DECLINED);
+        assertThat(result.declineReason()).isEqualTo("stolen_card");
+    }
+
     /** Slow — runs only in nightly CI. */
     @org.junit.jupiter.api.Disabled("slow — runs in nightly CI")
     @Test
     void timeoutCardThrows() {
         assertThatThrownBy(() -> gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
                 new PaymentGateway.CardDetails("4000000000000069", "12/29", "123", "X")))
+                .isInstanceOf(GatewayTimeoutException.class);
+    }
+
+    /** Slow — runs only in nightly CI. */
+    @org.junit.jupiter.api.Disabled("slow — runs in nightly CI")
+    @Test
+    void alternativeTimeoutCardThrows() {
+        assertThatThrownBy(() -> gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
+                new PaymentGateway.CardDetails("4000000000000226", "12/29", "123", "X")))
                 .isInstanceOf(GatewayTimeoutException.class);
     }
 }
