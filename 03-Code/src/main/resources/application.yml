@@ -101,3 +101,7 @@ gateway:
       - number: "6105105105105100"
         outcome: APPROVE
         label: "Mastercard — always approves (alt BIN)"
+      - number: "8000000000000010"
+        outcome: DECLINE
+        reason: expired_card
+        label: "Visa — Txn Limited expired"

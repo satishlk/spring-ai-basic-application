@@ -38,7 +38,8 @@ class DummyPaymentGatewayTest {
                 card("6011000000000004", Outcome.APPROVE, null),
                 card("4000000000000226", Outcome.TIMEOUT, null),
                 card("4000000000009995", Outcome.DECLINE, "stolen_card"),
-                card("6105105105105100", Outcome.APPROVE, null)
+                card("6105105105105100", Outcome.APPROVE, null),
+                card("8000000000000010", Outcome.DECLINE, "expired_card")
         ));
         return new DummyPaymentGateway(props);
     }
@@ -181,6 +182,15 @@ class DummyPaymentGatewayTest {
 
         assertThat(result.status()).isEqualTo(PaymentGateway.PaymentResult.Status.DECLINED);
         assertThat(result.declineReason()).isEqualTo("stolen_card");
+    }
+
+    @Test
+    void txnLimitedExpiredCardReturnsExpiredCard() {
+        var result = gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
+                new PaymentGateway.CardDetails("8000000000000010", "12/29", "123", "X"));
+
+        assertThat(result.status()).isEqualTo(PaymentGateway.PaymentResult.Status.DECLINED);
+        assertThat(result.declineReason()).isEqualTo("expired_card");
     }
 
     /** Slow — runs only in nightly CI. */
