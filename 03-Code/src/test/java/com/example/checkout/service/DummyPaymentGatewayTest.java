@@ -32,7 +32,9 @@ class DummyPaymentGatewayTest {
                 card("4000000000000341", Outcome.DECLINE, "expired_card"),
                 card("4000000000000127", Outcome.DECLINE, "incorrect_cvc"),
                 card("4000000000000119", Outcome.DECLINE, "processing_error"),
-                card("4100000000000019", Outcome.DECLINE, "fraudulent")
+                card("4100000000000019", Outcome.DECLINE, "fraudulent"),
+                card("4242424242424242", Outcome.APPROVE, null),
+                card("4000002500003155", Outcome.DECLINE, "requires_authentication")
         ));
         return new DummyPaymentGateway(props);
     }
@@ -130,6 +132,24 @@ class DummyPaymentGatewayTest {
                 new PaymentGateway.CardDetails("4100000000000019", "12/29", "123", "X"));
 
         assertThat(result.declineReason()).isEqualTo("fraudulent");
+    }
+
+    @Test
+    void alternativeApproveCardReturnsApproved() {
+        var result = gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
+                new PaymentGateway.CardDetails("4242424242424242", "12/29", "123", "X"));
+
+        assertThat(result.status()).isEqualTo(PaymentGateway.PaymentResult.Status.APPROVED);
+        assertThat(result.transactionId()).startsWith("txn-");
+    }
+
+    @Test
+    void requires3dsCardReturnsRequiresAuthentication() {
+        var result = gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
+                new PaymentGateway.CardDetails("4000002500003155", "12/29", "123", "X"));
+
+        assertThat(result.status()).isEqualTo(PaymentGateway.PaymentResult.Status.DECLINED);
+        assertThat(result.declineReason()).isEqualTo("requires_authentication");
     }
 
     /** Slow — runs only in nightly CI. */

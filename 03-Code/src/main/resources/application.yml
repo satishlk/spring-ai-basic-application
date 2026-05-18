@@ -81,3 +81,10 @@ gateway:
         outcome: DECLINE
         reason: fraudulent
         label: "Visa — fraud suspected"
+      - number: "4242424242424242"
+        outcome: APPROVE
+        label: "Visa — alternative happy-path card"
+      - number: "4000002500003155"
+        outcome: DECLINE
+        reason: requires_authentication
+        label: "Visa — 3-D Secure challenge required"
