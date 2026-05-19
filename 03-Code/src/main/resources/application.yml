@@ -1,0 +1,119 @@
+spring:
+  application:
+    name: checkout
+  datasource:
+    url: jdbc:h2:mem:checkout;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  thymeleaf:
+    cache: false
+
+server:
+  port: 8080
+
+# Stage 5 — actuator + Prometheus scrape endpoint
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+  metrics:
+    tags:
+      application: checkout
+
+logging:
+  pattern:
+    level: "%5p [%X{cartId},%X{idempotencyKey},%X{orderId}]"
+  level:
+    com.example.checkout: INFO
+
+# -----------------------------------------------------------------------------
+# Dummy payment gateway — test card rules.
+# Bound to com.example.checkout.config.TestCardProperties.
+#
+# Adding a new scenario: append a `- number: …` entry below. No Java needed.
+# Allowed `outcome` values: APPROVE | DECLINE | TIMEOUT.
+# For DECLINE, set `reason` (string surfaced to the client).
+# Unknown card numbers fall through to `default-decline-reason`.
+# -----------------------------------------------------------------------------
+gateway:
+  test-cards:
+    timeout-threshold-ms: 5000
+    default-decline-reason: do_not_honor
+    cards:
+      - number: "4111111111111111"
+        outcome: APPROVE
+        label: "Visa — always approves"
+      - number: "4000000000000002"
+        outcome: DECLINE
+        reason: insufficient_funds
+        label: "Visa — insufficient funds"
+      - number: "4000000000000069"
+        outcome: TIMEOUT
+        label: "Visa — gateway timeout simulator"
+      - number: "5555555555554444"
+        outcome: APPROVE
+        label: "Mastercard — primary happy-path card"
+      - number: "378282246310005"
+        outcome: APPROVE
+        label: "Amex — always approves"
+      - number: "4000000000000341"
+        outcome: DECLINE
+        reason: expired_card
+        label: "Visa — expired card"
+      - number: "4000000000000127"
+        outcome: DECLINE
+        reason: incorrect_cvc
+        label: "Visa — incorrect CVC"
+      - number: "4000000000000119"
+        outcome: DECLINE
+        reason: processing_error
+        label: "Visa — processing error"
+      - number: "4100000000000019"
+        outcome: DECLINE
+        reason: fraudulent
+        label: "Visa — fraud suspected"
+      - number: "4242424242424242"
+        outcome: APPROVE
+        label: "Visa — alternative happy-path card"
+      - number: "4000002500003155"
+        outcome: DECLINE
+        reason: requires_authentication
+        label: "Visa — 3-D Secure challenge required"
+      - number: "6011000000000004"
+        outcome: APPROVE
+        label: "Discover — always approves"
+      - number: "4000000000000226"
+        outcome: TIMEOUT
+        label: "Visa — gateway timeout simulator (alt)"
+      - number: "4000000000009995"
+        outcome: DECLINE
+        reason: stolen_card
+        label: "Visa — stolen card"
+      - number: "6105105105105100"
+        outcome: APPROVE
+        label: "Mastercard — always approves (alt BIN)"
+      - number: "8000000000000010"
+        outcome: DECLINE
+        reason: expired_card
+        label: "Visa — Txn Card expired"
+      - number: "8105105105105100"
+        outcome: APPROVE
+        label: "Custom BIN — always approves"
+      - number: "9105105105105100"
+        outcome: APPROVE
+        label: "Custom BIN — always approves (9-prefix)"
+      - number: "6605105105105100"
+        outcome: APPROVE
+        label: "Custom BIN — always approves (66-prefix)"
+      - number: "8805105105105100"
+        outcome: APPROVE
+        label: "Custom BIN — always approves (88-prefix)"

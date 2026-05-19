@@ -1,0 +1,146 @@
+openapi: 3.0.3
+info:
+  title: Checkout Service API
+  version: 1.0.0
+  description: |
+    Public API for the Checkout service. Generated from the contracts in
+    `02-Technical-Design/technical-design.md §3` and kept in lockstep with
+    the controller. Import this file into Postman, Insomnia, or your API
+    catalogue.
+  contact:
+    name: Checkout team
+    url: https://github.com/example/checkout
+
+servers:
+  - url: http://localhost:8080
+    description: local
+  - url: https://checkout-staging.internal.example.com
+    description: staging
+  - url: https://checkout.example.com
+    description: prod
+
+paths:
+  /api/checkout/{cartId}:
+    get:
+      summary: Fetch a cart for checkout review (FR-1)
+      parameters:
+        - in: path
+          name: cartId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Cart with line items and grand total
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '400':
+          description: Empty cart
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404':
+          description: Cart not found
+
+  /api/checkout/pay:
+    post:
+      summary: Submit payment for a cart (FR-2..FR-6)
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+          description: Unique per checkout attempt; replays return the original result.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PaymentRequest' }
+      responses:
+        '200':
+          description: Payment approved (or idempotent replay)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CheckoutResponse' }
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
+        '402':
+          description: Payment declined by gateway
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeclinedResponse' }
+        '504':
+          description: Gateway timed out (retry safe with same Idempotency-Key)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+components:
+  schemas:
+    Cart:
+      type: object
+      required: [cartId, items, currency, grandTotal]
+      properties:
+        cartId:     { type: string }
+        currency:   { type: string, example: INR }
+        grandTotal: { type: number, format: double }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CartItem' }
+
+    CartItem:
+      type: object
+      required: [sku, name, qty, unitPrice]
+      properties:
+        sku:       { type: string }
+        name:      { type: string }
+        qty:       { type: integer, minimum: 1 }
+        unitPrice: { type: number, format: double }
+
+    PaymentRequest:
+      type: object
+      required: [cartId, cardNumber, expiry, cvv, cardholderName]
+      properties:
+        cartId:         { type: string }
+        cardNumber:     { type: string, pattern: '^\d{16}$', example: '4111111111111111' }
+        expiry:         { type: string, pattern: '^(0[1-9]|1[0-2])/\d{2}$', example: '12/29' }
+        cvv:            { type: string, pattern: '^\d{3}$', example: '123' }
+        cardholderName: { type: string }
+
+    CheckoutResponse:
+      type: object
+      required: [status, orderId, transactionId, amount, last4]
+      properties:
+        status:        { type: string, enum: [PAID] }
+        orderId:       { type: string, example: ord-9af3e0b1 }
+        transactionId: { type: string, example: txn-abc123 }
+        amount:        { type: number, format: double }
+        last4:         { type: string, example: '1111' }
+
+    DeclinedResponse:
+      type: object
+      required: [status, reason]
+      properties:
+        status: { type: string, enum: [DECLINED] }
+        reason: { type: string, example: insufficient_funds }
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:    { type: string, example: EMPTY_CART }
+        message: { type: string }
+
+    ValidationError:
+      type: object
+      required: [code, fields]
+      properties:
+        code:   { type: string, enum: [VALIDATION] }
+        fields:
+          type: object
+          additionalProperties: { type: string }
+          example:
+            cardNumber: must be 16 digits
