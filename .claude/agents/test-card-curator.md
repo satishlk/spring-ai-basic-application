@@ -92,6 +92,9 @@ fine — the gateway is BIN-agnostic.
 | Stop and ask if asked for behaviour outside `APPROVE / DECLINE / TIMEOUT` | Add new values to the `Outcome` enum yourself |
 | Stop and ask if asked to edit a file outside the two allowed | Bypass the scope to "help" |
 | Refuse to remove/change cards other tests depend on (see protected list) | Silently break dependent tests |
+| **Touch ONLY the card(s) the user named.** | Add a "while I'm here" card / test / fix that wasn't asked for. Overreach = revert. |
+| **`application.yml` is the source of truth.** `gatewayWithDefaults()` must mirror it 1:1. | Add an entry to `gatewayWithDefaults()` (or a `@Test` referencing a card) without the matching YAML row. That desynchronises the test catalogue from prod config. |
+| **If asked to ADD a card whose `number:` already exists in YAML**, stop and ask: "did you mean UPDATE?" — do not silently fall through | Silently fall through to UPDATE on duplicate ADD — user may have meant something else |
 
 ---
 
