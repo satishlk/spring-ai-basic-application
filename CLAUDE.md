@@ -120,6 +120,50 @@ These are also documented in `02-Technical-Design/technical-design.md §5`.
 
 ---
 
+## ✍️ Commit message rules (MANDATORY)
+
+Never use generic messages like `AI commit`, `update`, `fix`, or `WIP`. Every commit must be self-describing so `git log --oneline` is scannable.
+
+**Format:**
+
+```
+<scope>: <specific change with unique context>
+
+<2–5 short bullet steps describing what was actually done>
+
+Co-Authored-By: Claude <model-id> <noreply@anthropic.com>
+```
+
+**Subject line rules:**
+- Start with a scope tag: `test-cards`, `gateway`, `checkout`, `docs`, `metrics`, `prd`, `design`, `tests`, `infra`.
+- Include the *unique* detail — the card number, the failure reason, the endpoint, the metric name. Not just "added card" but "added card 4000…0259 for `expired_card` decline".
+- Imperative mood, ≤72 chars.
+
+**Body rules:**
+- 2–5 bullets, each a short step (what changed, not why-philosophy). Example bullets: `- added row to application.yml`, `- new JUnit test approves_card_4111`, `- mvn test green`.
+- Mention files touched only if non-obvious.
+- End with the `Co-Authored-By` trailer including the actual model id from the environment (e.g. `claude-opus-4-7`).
+
+**Examples:**
+
+✅ Good
+```
+test-cards: add 4000000000000259 → DECLINE expired_card
+
+- appended row to DummyPaymentGateway config in application.yml
+- added test declines_expired_card_4000…0259 in DummyPaymentGatewayTest
+- updated test-card table in CLAUDE.md and technical-design.md §5
+- mvn test green
+
+Co-Authored-By: Claude claude-opus-4-7 <noreply@anthropic.com>
+```
+
+❌ Bad: `AI commit`, `added test card`, `fix gateway`.
+
+Use a HEREDOC when committing so newlines render correctly (see global git instructions).
+
+---
+
 ## 📝 Definition of Done (per PR)
 
 - [ ] PRD updated (if user-visible behaviour changes).
