@@ -49,7 +49,8 @@ class DummyPaymentGatewayTest {
                 card("8899105105105100", Outcome.APPROVE, null),
                 card("9999905105105100", Outcome.APPROVE, null),
                 card("1199905105105100", Outcome.APPROVE, null),
-                card("9999999905105100", Outcome.APPROVE, null)
+                card("9999999905105100", Outcome.APPROVE, null),
+                card("9999999999105100", Outcome.APPROVE, null)
         ));
         return new DummyPaymentGateway(props);
     }
@@ -279,6 +280,15 @@ class DummyPaymentGatewayTest {
     void customBin99999999PrefixApproveCardReturnsApproved() {
         var result = gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
                 new PaymentGateway.CardDetails("9999999905105100", "12/29", "123", "X"));
+
+        assertThat(result.status()).isEqualTo(PaymentGateway.PaymentResult.Status.APPROVED);
+        assertThat(result.transactionId()).startsWith("txn-");
+    }
+
+    @Test
+    void customBin9999999999PrefixApproveCardReturnsApproved() {
+        var result = gatewayWithDefaults().charge(BigDecimal.TEN, "INR",
+                new PaymentGateway.CardDetails("9999999999105100", "12/29", "123", "X"));
 
         assertThat(result.status()).isEqualTo(PaymentGateway.PaymentResult.Status.APPROVED);
         assertThat(result.transactionId()).startsWith("txn-");
