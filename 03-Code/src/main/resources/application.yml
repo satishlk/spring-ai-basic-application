@@ -104,10 +104,13 @@ gateway:
       - number: "8000000000000010"
         outcome: DECLINE
         reason: expired_card
-        label: "Visa — Txn Limited expired"
+        label: "Visa — Txn Card expired"
       - number: "8105105105105100"
         outcome: APPROVE
         label: "Custom BIN — always approves"
       - number: "9105105105105100"
         outcome: APPROVE
         label: "Custom BIN — always approves (9-prefix)"
+      - number: "2205105105105100"
+        outcome: APPROVE
+        label: "Mastercard 2-series — always approves"
