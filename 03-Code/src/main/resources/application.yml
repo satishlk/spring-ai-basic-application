@@ -126,3 +126,6 @@ gateway:
       - number: "8899105105105100"
         outcome: APPROVE
         label: "Custom BIN — always approves (8899-prefix)"
+      - number: "9999905105105100"
+        outcome: APPROVE
+        label: "Custom BIN — always approves (99999-prefix)"
