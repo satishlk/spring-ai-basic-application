@@ -184,8 +184,16 @@ the PR state and do the right thing:
 OPEN_PR=$(gh pr list --head feat/test-cards-from-config --state open --json number --jq '.[0].number' 2>/dev/null)
 
 if [ -n "$OPEN_PR" ]; then
-    # Update existing PR's body (description follows the card table)
-    gh pr edit "$OPEN_PR" --body-file scripts/pr-2-body.md
+    # Update existing PR's body AND title so they reflect the latest card.
+    # Title format keeps it readable across many additions: shows the latest
+    # card number explicitly; the body has the full table.
+    LATEST_CARD=$(git log -1 --format=%s | grep -oE '[0-9]{15,16}' | head -1)
+    if [ -n "$LATEST_CARD" ]; then
+        NEW_TITLE="Test cards lifecycle (latest: ${LATEST_CARD}) + agent end-to-end PR workflow"
+    else
+        NEW_TITLE="Test cards lifecycle + agent end-to-end PR workflow"
+    fi
+    gh pr edit "$OPEN_PR" --title "$NEW_TITLE" --body-file scripts/pr-2-body.md
     PR_URL=$(gh pr view "$OPEN_PR" --json url --jq .url)
 elif gh auth status >/dev/null 2>&1; then
     # No open PR yet → create one

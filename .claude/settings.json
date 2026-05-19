@@ -6,12 +6,34 @@
       "Bash(gh *)",
       "Bash(open *)",
       "Bash(curl *)",
-      "Bash(git push*)",
-      "Bash(git pull*)",
-      "Bash(git fetch*)",
-      "Bash(git remote*)",
+      "Bash(git *)",
       "Bash(mvn)",
-      "Bash(mvn *)"
+      "Bash(mvn *)",
+      "Bash(source *)",
+      "Bash(echo *)",
+      "Bash(cat *)",
+      "Bash(ls *)",
+      "Bash(grep *)",
+      "Bash(sed *)",
+      "Bash(awk *)",
+      "Bash(jq *)",
+      "Bash(python3 *)",
+      "Bash(printf *)",
+      "Bash(test *)",
+      "Bash(true)",
+      "Bash(false)",
+      "Bash(export *)"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~*)",
+      "Bash(sudo *)",
+      "Bash(git push --force *main*)",
+      "Bash(git push --force *master*)",
+      "Bash(git push -f *main*)",
+      "Bash(git push -f *master*)",
+      "Bash(git reset --hard *origin/main*)",
+      "Bash(git reset --hard *origin/master*)"
     ]
   }
 }
