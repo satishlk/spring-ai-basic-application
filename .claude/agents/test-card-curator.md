@@ -146,6 +146,77 @@ Expected: `BUILD SUCCESS` with all `DummyPaymentGatewayTest` methods green
 If the build fails, fix the cause yourself (likely a typo or YAML
 indentation) before reporting back. Do not return red.
 
+## End-to-end git + GitHub publish (mandatory)
+
+After `mvn test` is green, complete the loop without asking the user
+for anything:
+
+### Step A — also update the PR body file
+
+For ADD/UPDATE/REMOVE that changes the catalogue, append/edit/remove
+the matching row in `scripts/pr-2-body.md` (and bump the "X → Y"
+count at the top) so the description stays in sync with reality.
+
+### Step B — commit + push
+
+Commit message subject line MUST include the card number(s) literally:
+
+```bash
+cd /Users/satish/StocksAnalysis/checkout-aidlc-example
+git add 03-Code/src/main/resources/application.yml \
+        03-Code/src/test/java/com/example/checkout/service/DummyPaymentGatewayTest.java \
+        scripts/pr-2-body.md
+git commit -m "test: <ADD|UPDATE|REMOVE> card <NUMBER> (<outcome>[, <reason>])
+
+<optional details>
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
+git push
+```
+
+### Step C — publish to GitHub (PR create or update)
+
+The branch `feat/test-cards-from-config` is the working branch. Detect
+the PR state and do the right thing:
+
+```bash
+# Is there an open PR for this branch?
+OPEN_PR=$(gh pr list --head feat/test-cards-from-config --state open --json number --jq '.[0].number' 2>/dev/null)
+
+if [ -n "$OPEN_PR" ]; then
+    # Update existing PR's body (description follows the card table)
+    gh pr edit "$OPEN_PR" --body-file scripts/pr-2-body.md
+    PR_URL=$(gh pr view "$OPEN_PR" --json url --jq .url)
+elif gh auth status >/dev/null 2>&1; then
+    # No open PR yet → create one
+    PR_URL=$(gh pr create --base main --head feat/test-cards-from-config \
+        --title "Test card changes (latest: <NUMBER>)" \
+        --body-file scripts/pr-2-body.md | tail -1)
+else
+    # gh has no auth → open a pre-filled compare URL in the user's browser
+    BRANCH=feat/test-cards-from-config
+    TITLE=$(printf "Test card changes (latest: %s)" "<NUMBER>" | jq -sRr @uri)
+    BODY=$(jq -sRr @uri < scripts/pr-2-body.md)
+    URL="https://github.com/satishlk/spring-ai-basic-application/compare/main...${BRANCH}?expand=1&title=${TITLE}&body=${BODY}"
+    open "$URL"
+    PR_URL="(browser opened with pre-filled form — click 'Create pull request')"
+fi
+echo "$PR_URL"
+```
+
+Include the resulting URL (or "browser opened" notice) in your final report.
+
+### Step D — open the PR in the browser
+
+After Step C, always run:
+
+```bash
+open "$PR_URL" 2>/dev/null || true
+```
+
+…so the user can visually verify on github.com. Skip if PR_URL is the
+"browser opened" placeholder (already opened above).
+
 ## Report format (keep under 200 words)
 
 End every run with a markdown block of this shape. Omit empty sections.
