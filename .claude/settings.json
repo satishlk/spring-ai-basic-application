@@ -1,14 +1,27 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
 
-  "//": "Project-scoped permissions for Claude Code. Strategy: blanket-allow",
-  "//1": "the Bash tool so cd/mkdir/chmod/find/rm/zsh/composite-commands etc.",
-  "//2": "all run silently — then DENY the genuinely destructive patterns.",
-  "//3": "Deny rules ALWAYS win over allow per Claude Code semantics.",
+  "//": "Project-scoped permissions. Strategy: maximally permissive with hard",
+  "//1": "denies for genuinely destructive ops. The previous version only",
+  "//2": "allowed Bash — Read/Edit/Write/Agent could still prompt.",
 
   "permissions": {
+    "defaultMode": "acceptEdits",
+
     "allow": [
-      "Bash"
+      "Bash",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "Task",
+      "Agent",
+      "NotebookEdit",
+      "TodoWrite",
+      "Skill"
     ],
 
     "deny": [
