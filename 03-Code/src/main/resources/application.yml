@@ -111,6 +111,6 @@ gateway:
       - number: "9105105105105100"
         outcome: APPROVE
         label: "Custom BIN — always approves (9-prefix)"
-      - number: "2205105105105100"
+      - number: "6605105105105100"
         outcome: APPROVE
-        label: "Mastercard 2-series — always approves"
+        label: "Custom BIN — always approves (66-prefix)"

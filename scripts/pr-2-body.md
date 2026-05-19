@@ -15,7 +15,7 @@ Three related changes plus the repo hygiene baseline:
 - [x] **Stage 5 — Metrics & docs** — `.gitignore`, `.gitattributes`, `.github/pull_request_template.md`, `.claude/agents/test-card-curator.md`, `.claude/agents/README.md`, updated `CLAUDE.md` for cross-session continuity.
 - [ ] ~~Stage 1 — PRD~~ — no user-visible behaviour change.
 
-## Test card catalogue (3 → 18)
+## Test card catalogue (3 → 19)
 
 | # | Card number | Outcome | Reason / Label |
 |---|---|---|---|
@@ -37,6 +37,7 @@ Three related changes plus the repo hygiene baseline:
 | 16 | `8000000000000010` | DECLINE | `expired_card` — "Visa — Txn Card expired" |
 | 17 | `8105105105105100` | APPROVE | Custom BIN (`8`-prefix) — always approves |
 | 18 | `9105105105105100` | APPROVE | Custom BIN (`9`-prefix) — always approves |
+| 19 | `6605105105105100` | APPROVE | Custom BIN (`66`-prefix) — always approves |
 
 Unknown card numbers fall back to `gateway.test-cards.default-decline-reason` (`do_not_honor`).
 
