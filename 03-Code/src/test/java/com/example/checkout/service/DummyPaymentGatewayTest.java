@@ -22,6 +22,15 @@ class DummyPaymentGatewayTest {
     }
 
     @Test
+    void mastercard2SeriesApproveCardReturnsApproved() {
+        var result = gateway.charge(BigDecimal.TEN, "INR",
+                new PaymentGateway.CardDetails("2205105105105100", "12/29", "123", "X"));
+
+        assertThat(result.status()).isEqualTo(PaymentGateway.PaymentResult.Status.APPROVED);
+        assertThat(result.transactionId()).startsWith("txn-");
+    }
+
+    @Test
     void declineCardReturnsInsufficientFunds() {
         var result = gateway.charge(BigDecimal.TEN, "INR",
                 new PaymentGateway.CardDetails("4000000000000002", "12/29", "123", "X"));

@@ -14,6 +14,7 @@ import java.util.UUID;
 public class DummyPaymentGateway implements PaymentGateway {
 
     static final String CARD_APPROVE      = "4111111111111111";
+    static final String CARD_APPROVE_MC2  = "2205105105105100";
     static final String CARD_DECLINE      = "4000000000000002";
     static final String CARD_TIMEOUT      = "4000000000000069";
     static final long   TIMEOUT_THRESHOLD = 5_000L;
@@ -24,7 +25,7 @@ public class DummyPaymentGateway implements PaymentGateway {
             sleep(TIMEOUT_THRESHOLD + 1_000);
             throw new GatewayTimeoutException();
         }
-        if (CARD_APPROVE.equals(card.number())) {
+        if (CARD_APPROVE.equals(card.number()) || CARD_APPROVE_MC2.equals(card.number())) {
             return PaymentResult.approved("txn-" + UUID.randomUUID());
         }
         if (CARD_DECLINE.equals(card.number())) {
