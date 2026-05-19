@@ -7,6 +7,43 @@
 
 ---
 
+## 📌 Session boot block (read this BEFORE doing anything in a new chat)
+
+**Active branch**: `feat/test-cards-from-config`
+**Active PR**: **#2** → https://github.com/satishlk/spring-ai-basic-application/pull/2
+**Closed**: PR #1 (placeholder title, abandoned); PR #3 (sub-agent worktree leak — closed via `scripts/finalize-pr.sh`).
+
+**Where each piece of project state lives**:
+
+| Need to know… | Run this |
+|---|---|
+| Current branch | `git branch --show-current` |
+| Recent commits | `git log --oneline -10` |
+| Open PRs and their head SHAs | `gh pr list --state open --json number,title,headRefName,headRefOid` |
+| Card count (current) | `grep -c '^      - number:' 03-Code/src/main/resources/application.yml` |
+| Are tests green? | `mvn -f 03-Code/pom.xml verify` |
+| Are sub-agents auto-loaded? | `ls .claude/agents/` — if `test-card-curator.md` is there, agent is available |
+| Is `gh` authenticated? | `gh auth status` — if "not logged in", run `echo "$GH_TOKEN" \| gh auth login --with-token --hostname github.com` |
+
+**Finalization recipe** (run when the PR is ready to be tidied up before merge):
+
+```bash
+bash scripts/finalize-pr.sh        # idempotent; updates PR #2 title+body, closes #3, deletes orphan branch
+```
+
+The script also persists `$GH_TOKEN` to `~/.config/gh/hosts.yml` if it's set but `gh` isn't logged in — so first-time setup auto-completes.
+
+**What the project IS**: an end-to-end AIDLC example (5-stage flow: PRD → Design → Code → Tests → Metrics) wrapped around a Spring Boot checkout page with a dummy payment gateway. Test cards are externalized to `application.yml` and managed via a project-scoped sub-agent (`.claude/agents/test-card-curator.md`) supporting ADD / UPDATE / REMOVE.
+
+**What the user typically asks for**:
+- Adding/updating/removing test cards (→ delegate to `@agent-test-card-curator`).
+- Opening / updating PRs (→ use `gh pr create`/`edit` with `--title` and `--body-file -`).
+- Explaining the AIDLC flow or the project's invariants (→ point to `01-PRD/` through `05-Metrics/`).
+
+If you (the next Claude) just want a single-paragraph orient-yourself before answering: *"This is a Java 21 / Spring Boot 3 checkout service. Test cards live in `application.yml` (currently 18 cards, last commit on `feat/test-cards-from-config`). The reusable `test-card-curator` sub-agent does ADD/UPDATE/REMOVE on cards. Work-in-progress goes to PR #2. To clean up PR #3 and finalize titles/body, run `bash scripts/finalize-pr.sh`."*
+
+---
+
 ## 🧠 Session continuity — read this first in any new chat
 
 A fresh Claude Code session has no memory of prior sessions. The fastest
