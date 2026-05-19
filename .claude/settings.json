@@ -1,39 +1,42 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+
+  "//": "Project-scoped permissions for Claude Code. Strategy: blanket-allow",
+  "//1": "the Bash tool so cd/mkdir/chmod/find/rm/zsh/composite-commands etc.",
+  "//2": "all run silently — then DENY the genuinely destructive patterns.",
+  "//3": "Deny rules ALWAYS win over allow per Claude Code semantics.",
+
   "permissions": {
     "allow": [
-      "Bash(gh)",
-      "Bash(gh *)",
-      "Bash(open *)",
-      "Bash(curl *)",
-      "Bash(git *)",
-      "Bash(mvn)",
-      "Bash(mvn *)",
-      "Bash(source *)",
-      "Bash(echo *)",
-      "Bash(cat *)",
-      "Bash(ls *)",
-      "Bash(grep *)",
-      "Bash(sed *)",
-      "Bash(awk *)",
-      "Bash(jq *)",
-      "Bash(python3 *)",
-      "Bash(printf *)",
-      "Bash(test *)",
-      "Bash(true)",
-      "Bash(false)",
-      "Bash(export *)"
+      "Bash"
     ],
+
     "deny": [
-      "Bash(rm -rf /*)",
-      "Bash(rm -rf ~*)",
       "Bash(sudo *)",
-      "Bash(git push --force *main*)",
-      "Bash(git push --force *master*)",
-      "Bash(git push -f *main*)",
-      "Bash(git push -f *master*)",
-      "Bash(git reset --hard *origin/main*)",
-      "Bash(git reset --hard *origin/master*)"
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf /)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -rf ~/*)",
+      "Bash(rm -rf $HOME*)",
+      "Bash(rm -rf ../*)",
+      "Bash(git push --force *main)",
+      "Bash(git push --force *master)",
+      "Bash(git push -f *main)",
+      "Bash(git push -f *master)",
+      "Bash(git push --force-with-lease *main)",
+      "Bash(git push --force-with-lease *master)",
+      "Bash(git reset --hard origin/main*)",
+      "Bash(git reset --hard origin/master*)",
+      "Bash(git branch -D main*)",
+      "Bash(git branch -D master*)",
+      "Bash(chmod 777 ~*)",
+      "Bash(chown root*)",
+      "Bash(dd if=*)",
+      "Bash(mkfs*)",
+      "Bash(curl * | sh)",
+      "Bash(curl * | bash)",
+      "Bash(wget * | sh)",
+      "Bash(wget * | bash)"
     ]
   }
 }
