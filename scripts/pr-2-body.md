@@ -15,7 +15,7 @@ Three related changes plus the repo hygiene baseline:
 - [x] **Stage 5 — Metrics & docs** — `.gitignore`, `.gitattributes`, `.github/pull_request_template.md`, `.claude/agents/test-card-curator.md`, `.claude/agents/README.md`, updated `CLAUDE.md` for cross-session continuity.
 - [ ] ~~Stage 1 — PRD~~ — no user-visible behaviour change.
 
-## Test card catalogue (3 → 29)
+## Test card catalogue (3 → 30)
 
 | # | Card number | Outcome | Reason / Label |
 |---|---|---|---|
@@ -48,6 +48,7 @@ Three related changes plus the repo hygiene baseline:
 | 27 | `9999999999105100` | APPROVE | Custom BIN (`9999999999`-prefix) — always approves |
 | 28 | `9999999905105199` | APPROVE | Custom BIN (`9999999905`-prefix) — always approves |
 | 29 | `9999999905109999` | APPROVE | Custom BIN (`99999999051`-prefix) — always approves |
+| 30 | `9999999988105100` | APPROVE | Custom BIN (`9999999988`-prefix) — always approves |
 
 Unknown card numbers fall back to `gateway.test-cards.default-decline-reason` (`do_not_honor`).
 
