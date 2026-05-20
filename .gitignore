@@ -236,3 +236,6 @@ terraform.rc
 
 # Sub-agent isolated worktree cache (transient, never commit)
 .claude/worktrees/
+
+# Claude Code per-machine local settings (env tokens, machine paths, bypass mode)
+.claude/settings.local.json
