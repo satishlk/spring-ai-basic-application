@@ -51,5 +51,19 @@
       "Bash(wget * | sh)",
       "Bash(wget * | bash)"
     ]
+  },
+
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/protect-cards.sh"
+          }
+        ]
+      }
+    ]
   }
 }
