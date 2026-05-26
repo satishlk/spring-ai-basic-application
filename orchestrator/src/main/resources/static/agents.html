@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Deployed Agents — AI Pipeline Orchestrator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg: #0f172a; --panel: #1e293b; --panel-2: #334155; --panel-3: #475569;
+      --txt: #e2e8f0; --txt-2: #94a3b8; --accent: #6366f1; --accent-2: #4f46e5;
+      --ok: #10b981; --bad: #ef4444; --warn: #f59e0b; --info: #3b82f6;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+           background: var(--bg); color: var(--txt); min-height: 100vh; }
+    button { font-family: inherit; cursor: pointer; }
+
+    header { padding: 18px 24px; background: var(--panel);
+             display: flex; align-items: center; justify-content: space-between;
+             border-bottom: 1px solid #334155; position: sticky; top: 0; z-index: 50; }
+    header h1 { margin: 0; font-size: 18px; letter-spacing: -.01em; }
+    .nav-link { color: var(--txt-2); text-decoration: none; font-size: 13px;
+                padding: 6px 12px; border-radius: 6px; transition: all .15s; }
+    .nav-link:hover { background: #334155; color: var(--txt); }
+    .nav-link.active { background: var(--accent); color: white; }
+
+    main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+    .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .toolbar h2 { margin: 0; font-size: 13px; text-transform: uppercase;
+                  letter-spacing: .08em; color: var(--txt-2); }
+    .toolbar .count { font-size: 12px; color: var(--txt-2); }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+            gap: 16px; }
+
+    /* ───────── Agent card ───────── */
+    .agent { background: var(--panel); border: 1px solid #334155; border-radius: 12px;
+             padding: 18px 20px; transition: border-color .15s, transform .1s; }
+    .agent:hover { border-color: var(--panel-3); }
+    .agent .head { display: flex; align-items: flex-start; justify-content: space-between;
+                   gap: 12px; }
+    .agent .name { font-size: 16px; font-weight: 600; color: var(--txt);
+                   font-family: ui-monospace, monospace; }
+    .agent .meta { font-size: 11px; color: var(--txt-2); margin-top: 4px; }
+    .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10px;
+             font-weight: 700; letter-spacing: .04em; padding: 4px 8px; border-radius: 5px;
+             background: var(--panel-2); color: var(--txt-2); white-space: nowrap; }
+    .badge.default { background: rgba(100, 116, 139, 0.15); color: var(--txt-2); }
+    .badge.modified { background: rgba(99, 102, 241, 0.18); color: #a5b4fc; }
+    .badge.reverted { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    .badge.source-yaml { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
+    .badge.source-db   { background: rgba(59, 130, 246, 0.18); color: #93c5fd; }
+
+    .agent .repo { display: inline-flex; align-items: center; gap: 6px;
+                   background: var(--panel-2); padding: 3px 8px; border-radius: 4px;
+                   font-size: 11px; font-family: ui-monospace, monospace; margin-top: 8px; }
+
+    .agent .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .pill { background: var(--panel-2); padding: 3px 10px; border-radius: 12px;
+            font-size: 11px; font-family: ui-monospace, monospace; }
+    .label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+             color: var(--txt-2); width: 100%; margin: 14px 0 4px; }
+
+    .ops { margin-top: 4px; }
+    .op  { display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+           background: var(--panel-2); border-radius: 6px; margin-bottom: 4px; }
+    .op .icon { font-size: 16px; width: 22px; text-align: center; }
+    .op .name { font-family: ui-monospace, monospace; font-size: 12px; min-width: 180px; }
+    .op .desc { color: var(--txt-2); font-size: 12px; }
+
+    .actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+    .btn  { background: var(--panel-2); border: 1px solid var(--panel-3);
+            color: var(--txt); padding: 6px 12px; border-radius: 6px; font-size: 12px;
+            transition: background .12s; }
+    .btn:hover { background: var(--panel-3); }
+    .btn.primary { background: var(--accent); border-color: var(--accent);
+                   color: white; font-weight: 500; }
+    .btn.primary:hover { background: var(--accent-2); }
+    .btn.danger:hover  { background: #b91c1c; border-color: #b91c1c; }
+    .btn.ghost { background: transparent; }
+
+    /* ───────── Modal ───────── */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.55);
+                      display: none; align-items: flex-start; justify-content: center;
+                      padding: 60px 16px; z-index: 100; overflow-y: auto; }
+    .modal-backdrop.open { display: flex; }
+    .modal { background: var(--panel); border-radius: 12px; padding: 24px 28px;
+             max-width: 920px; width: 100%; border: 1px solid #334155;
+             box-shadow: 0 20px 50px rgba(0,0,0,.4); }
+    .modal h3 { margin: 0 0 4px; font-size: 18px; font-family: ui-monospace, monospace; }
+    .modal .sub { color: var(--txt-2); font-size: 12px; margin-bottom: 18px; }
+    .modal .group { margin: 16px 0; }
+    .modal label { display: block; font-size: 11px; text-transform: uppercase;
+                   letter-spacing: .07em; color: var(--txt-2); margin-bottom: 6px; }
+    .modal input, .modal textarea {
+            width: 100%; background: #0f172a; color: var(--txt); padding: 9px 12px;
+            border: 1px solid #334155; border-radius: 6px; font-size: 13px;
+            font-family: ui-monospace, monospace; }
+    .modal textarea { resize: vertical; min-height: 110px; line-height: 1.55; }
+    .modal textarea.prompt { min-height: 320px; }
+    .modal .hint { font-size: 11px; color: var(--txt-2); margin-top: 4px; }
+    .modal .footer { display: flex; justify-content: space-between; align-items: center;
+                     margin-top: 22px; gap: 10px; flex-wrap: wrap; }
+    .modal .footer .actions { margin-top: 0; }
+
+    /* ───────── History drawer ───────── */
+    .history-list { margin-top: 8px; max-height: 60vh; overflow-y: auto; }
+    .version { padding: 12px; border: 1px solid #334155; border-radius: 8px;
+               margin-bottom: 8px; background: #0f172a; }
+    .version .v-head { display: flex; align-items: center; justify-content: space-between;
+                       margin-bottom: 6px; }
+    .version .v-num { font-family: ui-monospace, monospace; font-size: 13px; font-weight: 600; }
+    .version .v-when { color: var(--txt-2); font-size: 11px; }
+    .version .v-by { color: var(--txt-2); font-size: 11px; margin-top: 2px; }
+    .version .v-note { color: var(--txt); font-size: 12px; margin-top: 6px; font-style: italic; }
+    .version .v-preview { color: var(--txt-2); font-size: 11px; margin-top: 6px;
+                          font-family: ui-monospace, monospace; line-height: 1.5;
+                          white-space: pre-wrap; word-break: break-word;
+                          max-height: 100px; overflow-y: auto;
+                          background: var(--panel); padding: 6px; border-radius: 4px; }
+
+    /* ───────── Toast ───────── */
+    .toast { position: fixed; bottom: 24px; right: 24px; background: var(--panel);
+             border: 1px solid var(--panel-3); border-left: 3px solid var(--ok);
+             padding: 12px 18px; border-radius: 8px; font-size: 13px;
+             box-shadow: 0 8px 24px rgba(0,0,0,.4);
+             opacity: 0; transform: translateY(20px); transition: all .25s;
+             z-index: 200; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.err { border-left-color: var(--bad); }
+
+    /* ───────── Trigger snippet ───────── */
+    .trigger-snippet { background: #0f172a; padding: 10px; border-radius: 6px;
+                       font-family: ui-monospace, monospace; font-size: 11px;
+                       color: var(--txt); margin-top: 8px; overflow-x: auto;
+                       border: 1px solid #334155; }
+    .trigger-snippet .v { color: #fcd34d; }
+
+    .empty { color: var(--txt-2); padding: 40px; text-align: center;
+             border: 1px dashed #334155; border-radius: 12px; }
+
+    footer { padding: 16px 24px; color: var(--txt-2); font-size: 11px; text-align: center;
+             border-top: 1px solid #334155; margin-top: 32px; }
+    footer code { background: var(--panel); padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div style="display:flex;align-items:center;gap:24px;">
+      <h1>🧭 AI Pipeline Orchestrator</h1>
+      <nav style="display:flex;gap:16px;">
+        <a href="/dashboard.html" class="nav-link">📊 Audit timeline</a>
+        <a href="/agents.html"    class="nav-link active">🤖 Deployed agents</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="toolbar">
+      <div>
+        <h2 style="display:inline-block; margin-right:12px;">Deployed Agent Profiles</h2>
+        <span class="count" id="count">…</span>
+      </div>
+      <button class="btn primary" onclick="openCreate()">+ New agent</button>
+    </div>
+    <div id="grid" class="grid"></div>
+  </main>
+
+  <footer>
+    Defaults from <code>application.yml</code> · Overrides stored in H2 (<code>agent_profile_version</code> table) · Each save creates a new version row (audit trail) · Reverts are explicit rows too · APIs: <code>/api/agents</code>, <code>/api/agents/{name}/override</code>, <code>/api/agents/{name}/history</code>
+  </footer>
+
+  <!-- ─────────── Edit modal ─────────── -->
+  <div id="edit-modal" class="modal-backdrop" onclick="closeEditOnBg(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3 id="edit-title">Edit agent</h3>
+      <div class="sub" id="edit-sub">…</div>
+
+      <div class="group">
+        <label>System prompt (Markdown) — blank to inherit YAML default</label>
+        <textarea id="f-prompt" class="prompt" spellcheck="false"></textarea>
+        <div class="hint">The safety preamble (Java-hardcoded) is always prepended. Only the agent-specific section is editable here.</div>
+      </div>
+
+      <div class="group">
+        <label>Allowed tools — one per line, blank to inherit</label>
+        <textarea id="f-tools" rows="6" spellcheck="false"
+                  placeholder="get_file_contents&#10;create_branch&#10;create_or_update_file&#10;create_pull_request"></textarea>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+        <div class="group">
+          <label>Target repo</label>
+          <input id="f-repo" type="text" placeholder="owner/repo">
+        </div>
+        <div class="group">
+          <label>Base branch</label>
+          <input id="f-base" type="text" placeholder="main">
+        </div>
+        <div class="group">
+          <label>Branch prefix</label>
+          <input id="f-prefix" type="text" placeholder="ai/card-">
+        </div>
+      </div>
+
+      <div class="group">
+        <label>Change note (optional)</label>
+        <input id="f-note" type="text" placeholder="e.g. 'Tightened anti-narration rules'">
+      </div>
+
+      <div class="footer">
+        <button class="btn ghost danger" onclick="revertToDefault()">↺ Revert to YAML default</button>
+        <div class="actions">
+          <button class="btn" onclick="closeEdit()">Cancel</button>
+          <button class="btn primary" onclick="saveOverride()">Save new version</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────── Create modal ─────────── -->
+  <div id="create-modal" class="modal-backdrop" onclick="closeCreateOnBg(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>+ New Agent</h3>
+      <div class="sub">Creates a DB-only agent (no YAML baseline). All fields below are required.</div>
+
+      <div class="group">
+        <label>Agent name (kebab-case, e.g. <code style="background:#0f172a;padding:1px 5px;border-radius:3px;">dependency-bumper</code>)</label>
+        <input id="c-name" type="text" placeholder="my-new-agent" autocomplete="off">
+        <div class="hint">Lowercase letters, digits and dashes. Must be unique across YAML + DB agents.</div>
+      </div>
+
+      <div class="group">
+        <label>System prompt (Markdown) *</label>
+        <textarea id="c-prompt" class="prompt" spellcheck="false"
+                  placeholder="# my-new-agent — agent prompt&#10;&#10;You are the …. Your job is to …&#10;&#10;## Workflow&#10;1. …&#10;2. …"></textarea>
+        <div class="hint">The Java safety preamble (no push to main/master/develop) is still always prepended at runtime.</div>
+      </div>
+
+      <div class="group">
+        <label>Allowed tools (one per line, at least one) *</label>
+        <textarea id="c-tools" rows="6" spellcheck="false"
+                  placeholder="get_file_contents&#10;create_branch&#10;create_or_update_file&#10;create_pull_request"></textarea>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+        <div class="group">
+          <label>Target repo *</label>
+          <input id="c-repo" type="text" placeholder="owner/repo">
+        </div>
+        <div class="group">
+          <label>Base branch *</label>
+          <input id="c-base" type="text" placeholder="main" value="main">
+        </div>
+        <div class="group">
+          <label>Branch prefix *</label>
+          <input id="c-prefix" type="text" placeholder="ai/" value="ai/">
+        </div>
+      </div>
+
+      <div class="group">
+        <label>Change note (optional)</label>
+        <input id="c-note" type="text" placeholder="e.g. 'Initial create — DB-only experiment for dependency bumps'">
+      </div>
+
+      <div class="footer">
+        <div class="hint" style="max-width:50%;">After creation, the agent appears in the list and can be triggered via <code>"eventType": "&lt;name&gt;"</code>.</div>
+        <div class="actions">
+          <button class="btn" onclick="closeCreate()">Cancel</button>
+          <button class="btn primary" onclick="createAgent()">Create agent</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────── History modal ─────────── -->
+  <div id="history-modal" class="modal-backdrop" onclick="closeHistoryOnBg(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3 id="history-title">History</h3>
+      <div class="sub">Newest first. Click "Restore" on any version to copy its content forward as a new version.</div>
+      <div id="history-list" class="history-list"></div>
+      <div class="footer">
+        <div></div>
+        <button class="btn primary" onclick="closeHistory()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+const TOOL_LIBRARY = {
+  'get_file_contents':       { icon: '📄', label: 'Read file' },
+  'create_branch':           { icon: '🌿', label: 'Create branch' },
+  'create_or_update_file':   { icon: '📝', label: 'Write file' },
+  'delete_file':             { icon: '🗑️', label: 'Delete file' },
+  'create_pull_request':     { icon: '🔀', label: 'Open PR' },
+  'update_pull_request':     { icon: '✏️', label: 'Update PR' },
+  'merge_pull_request':      { icon: '🔁', label: 'Merge PR (forbidden)' },
+  'add_item_to_project_v2':  { icon: '📋', label: 'Track in project' },
+  'list_branches':           { icon: '🌳', label: 'List branches' },
+  'list_commits':            { icon: '🧾', label: 'List commits' },
+  'search_code':             { icon: '🔍', label: 'Search code' },
+  'search_repositories':     { icon: '🔭', label: 'Search repos' },
+  'create_issue':            { icon: '🐛', label: 'Create issue' },
+  'update_issue':            { icon: '✏️', label: 'Update issue' },
+  'add_issue_comment':       { icon: '💬', label: 'Comment on issue' },
+};
+function opMeta(t) { return TOOL_LIBRARY[t] ?? { icon: '🛠️', label: t }; }
+
+function escapeHtml(s) {
+  return (s ?? '').toString()
+      .replaceAll('&','&amp;').replaceAll('<','&lt;')
+      .replaceAll('>','&gt;').replaceAll('"','&quot;');
+}
+function fmtRel(iso) {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000), h = Math.floor(diff / 3600000), d = Math.floor(diff / 86400000);
+  if (d > 0) return d + 'd ago';
+  if (h > 0) return h + 'h ago';
+  if (m > 0) return m + 'm ago';
+  return 'just now';
+}
+function fmtAbs(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleString();
+}
+
+function statusBadge(a) {
+  if (a.source === 'db')        return `<span class="badge source-db">🗄 DB-only · v${a.currentVersion}</span>`;
+  if (a.currentVersion == null) return `<span class="badge source-yaml">📄 YAML default</span>`;
+  if (a.revertedToDefault)      return `<span class="badge reverted">REVERTED to YAML · v${a.currentVersion}</span>`;
+  return `<span class="badge modified">📝 v${a.currentVersion} · ${fmtRel(a.lastEditedAt)}</span>`;
+}
+
+function renderAgent(a) {
+  const ops = (a.allowedTools || []).map(t => {
+    const m = opMeta(t);
+    return `<div class="op">
+              <div class="icon">${m.icon}</div>
+              <div class="name">${escapeHtml(t)}</div>
+              <div class="desc">${escapeHtml(m.label)}</div>
+            </div>`;
+  }).join('');
+
+  const exampleTask = a.name.includes('test-card')
+      ? 'add a card 4242424242424242 that approves'
+      : a.name.includes('failure-fixer')
+      ? 'Pipeline X failed at step `mvn test`. Trace: …'
+      : 'describe your task here';
+
+  return `
+    <div class="agent" id="agent-${escapeHtml(a.name)}">
+      <div class="head">
+        <div style="flex:1; min-width:0;">
+          <div class="name">${escapeHtml(a.name)}</div>
+          <div class="meta">
+            ${a.allowedTools.length} operation${a.allowedTools.length === 1 ? '' : 's'} ·
+            prompt file: ${escapeHtml((a.promptFile||'').replace('classpath:/',''))}
+            ${a.lastEditedBy ? ' · last by ' + escapeHtml(a.lastEditedBy) : ''}
+          </div>
+          <div class="repo">↳ ${escapeHtml(a.targetRepo)}</div>
+        </div>
+        <div>${statusBadge(a)}</div>
+      </div>
+
+      <div class="row">
+        <span class="pill">base: ${escapeHtml(a.baseBranch)}</span>
+        <span class="pill">branch prefix: ${escapeHtml(a.branchPrefix)}</span>
+      </div>
+
+      <div class="label">Allowed operations</div>
+      <div class="ops">${ops}</div>
+
+      <div class="label">Trigger curl</div>
+      <div class="trigger-snippet">curl -X POST http://localhost:8080/v1/trigger \\
+  -H "Content-Type: application/json" \\
+  -d '{"eventType":<span class="v">"${escapeHtml(a.name)}"</span>,"task":<span class="v">"${escapeHtml(exampleTask)}"</span>}'</div>
+
+      <div class="actions">
+        <button class="btn primary" onclick="openEdit('${escapeHtml(a.name)}')">✏️ Edit</button>
+        <button class="btn" onclick="openHistory('${escapeHtml(a.name)}')">🕒 History</button>
+      </div>
+    </div>
+  `;
+}
+
+async function loadList() {
+  const r = await fetch('/api/agents');
+  const list = await r.json();
+  $('count').textContent = list.length + ' agent' + (list.length === 1 ? '' : 's') + ' deployed';
+  if (!Array.isArray(list) || list.length === 0) {
+    $('grid').innerHTML = '<div class="empty">No agent profiles configured. Add one in <code>application.yml → agents.profiles.*</code> and restart.</div>';
+    return;
+  }
+  $('grid').innerHTML = list.map(renderAgent).join('');
+}
+
+// ─────────── Edit modal ───────────
+let editingAgent = null;
+let editingSource = null;
+
+async function openEdit(name) {
+  editingAgent = name;
+  const r = await fetch(`/api/agents/${encodeURIComponent(name)}`);
+  const d = await r.json();
+  editingSource = d.source;     // "yaml" or "db"
+  $('edit-title').textContent = 'Edit · ' + name + (d.source === 'db' ? '  (DB-only)' : '');
+  $('edit-sub').textContent = d.source === 'db'
+      ? `DB-only agent at v${d.currentVersion}. No YAML baseline — all fields are stored in DB. Saving creates v${d.currentVersion + 1}.`
+      : (d.currentVersion == null
+          ? 'Currently using YAML defaults. Saving will create version 1.'
+          : `Currently at version ${d.currentVersion} (${d.lastEditedBy || 'unknown'} · ${fmtAbs(d.lastEditedAt)}). Saving creates v${d.currentVersion + 1}.`);
+  $('f-prompt').value = d.systemPrompt || '';
+  $('f-tools').value  = (d.allowedTools || []).join('\n');
+  $('f-repo').value   = d.targetRepo || '';
+  $('f-base').value   = d.baseBranch || '';
+  $('f-prefix').value = d.branchPrefix || '';
+  $('f-note').value   = '';
+
+  // Hide "revert to YAML default" for DB-only agents — there's nothing to revert to.
+  const revertBtn = document.querySelector('#edit-modal .btn.ghost.danger');
+  if (revertBtn) revertBtn.style.display = (d.source === 'db') ? 'none' : '';
+
+  $('edit-modal').classList.add('open');
+}
+function closeEdit()  { $('edit-modal').classList.remove('open'); editingAgent = null; }
+function closeEditOnBg(e) { if (e.target.id === 'edit-modal') closeEdit(); }
+
+async function saveOverride() {
+  if (!editingAgent) return;
+  const body = {
+    promptText:   $('f-prompt').value.trim() || null,
+    allowedTools: $('f-tools').value.split('\n').map(s => s.trim()).filter(Boolean),
+    targetRepo:   $('f-repo').value.trim()   || null,
+    baseBranch:   $('f-base').value.trim()   || null,
+    branchPrefix: $('f-prefix').value.trim() || null,
+    changeNote:   $('f-note').value.trim()   || null,
+  };
+  if (body.allowedTools.length === 0) body.allowedTools = null;
+
+  try {
+    const r = await fetch(`/api/agents/${encodeURIComponent(editingAgent)}/override`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    toast(`Saved · ${editingAgent} → v${(await r.json()).currentVersion}`);
+    closeEdit();
+    loadList();
+  } catch (e) {
+    toast('Save failed: ' + e.message, true);
+  }
+}
+
+async function revertToDefault() {
+  if (!editingAgent) return;
+  if (!confirm(`Revert "${editingAgent}" to YAML default? A new version row will mark this revert in history.`)) return;
+  try {
+    const r = await fetch(`/api/agents/${encodeURIComponent(editingAgent)}/override`, { method: 'DELETE' });
+    if (!r.ok) {
+      const body = await r.json().catch(() => ({}));
+      throw new Error(body.error || ('HTTP ' + r.status));
+    }
+    toast(`Reverted · ${editingAgent} → YAML default`);
+    closeEdit();
+    loadList();
+  } catch (e) {
+    toast('Revert failed: ' + e.message, true);
+  }
+}
+
+// ─────────── Create modal ───────────
+function openCreate() {
+  // Reset all fields, keep "main" and "ai/" as helpful defaults.
+  $('c-name').value   = '';
+  $('c-prompt').value = '';
+  $('c-tools').value  = '';
+  $('c-repo').value   = '';
+  $('c-base').value   = 'main';
+  $('c-prefix').value = 'ai/';
+  $('c-note').value   = '';
+  $('create-modal').classList.add('open');
+  setTimeout(() => $('c-name').focus(), 50);
+}
+function closeCreate()  { $('create-modal').classList.remove('open'); }
+function closeCreateOnBg(e) { if (e.target.id === 'create-modal') closeCreate(); }
+
+async function createAgent() {
+  // Client-side pre-validation — backend re-validates too, but this gives instant feedback.
+  const name   = $('c-name').value.trim();
+  const prompt = $('c-prompt').value.trim();
+  const tools  = $('c-tools').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const repo   = $('c-repo').value.trim();
+  const base   = $('c-base').value.trim();
+  const prefix = $('c-prefix').value.trim();
+  const note   = $('c-note').value.trim();
+
+  if (!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(name)) {
+    toast('Name must be lowercase kebab-case (e.g. dependency-bumper)', true); return;
+  }
+  if (!prompt) { toast('System prompt is required', true); return; }
+  if (tools.length === 0) { toast('At least one allowed tool is required', true); return; }
+  if (!repo)   { toast('Target repo is required (owner/repo)', true); return; }
+  if (!base)   { toast('Base branch is required', true); return; }
+  if (!prefix) { toast('Branch prefix is required', true); return; }
+
+  try {
+    const r = await fetch('/api/agents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name, promptText: prompt, allowedTools: tools,
+        targetRepo: repo, baseBranch: base, branchPrefix: prefix,
+        changeNote: note || null
+      })
+    });
+    if (!r.ok) {
+      const body = await r.json().catch(() => ({}));
+      throw new Error(body.error || ('HTTP ' + r.status));
+    }
+    toast(`Created · ${name} (v1)`);
+    closeCreate();
+    loadList();
+  } catch (e) {
+    toast('Create failed: ' + e.message, true);
+  }
+}
+
+// ─────────── History modal ───────────
+async function openHistory(name) {
+  $('history-title').textContent = 'History · ' + name;
+  $('history-list').innerHTML = 'Loading…';
+  $('history-modal').classList.add('open');
+  try {
+    const r = await fetch(`/api/agents/${encodeURIComponent(name)}/history`);
+    const versions = await r.json();
+    if (!versions.length) {
+      $('history-list').innerHTML = `<div class="empty" style="padding:24px;">No overrides yet. The agent is running on YAML defaults.</div>`;
+      return;
+    }
+    $('history-list').innerHTML = versions.map(v => `
+      <div class="version">
+        <div class="v-head">
+          <span class="v-num">v${v.version}${v.revertToDefault ? ' (revert to YAML)' : ''}</span>
+          <span class="v-when">${fmtAbs(v.changedAt)} · ${fmtRel(v.changedAt)}</span>
+        </div>
+        <div class="v-by">by ${escapeHtml(v.changedBy || 'unknown')}</div>
+        ${v.changeNote ? `<div class="v-note">"${escapeHtml(v.changeNote)}"</div>` : ''}
+        ${v.promptTextPreview ? `<div class="v-preview">${escapeHtml(v.promptTextPreview)}</div>` : ''}
+        <div class="actions" style="margin-top:8px">
+          <button class="btn" onclick="restoreVersion('${escapeHtml(name)}', ${v.version})">↻ Restore this version</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    $('history-list').innerHTML = `<div class="empty">Failed to load history: ${escapeHtml(e.message)}</div>`;
+  }
+}
+function closeHistory() { $('history-modal').classList.remove('open'); }
+function closeHistoryOnBg(e) { if (e.target.id === 'history-modal') closeHistory(); }
+
+async function restoreVersion(name, v) {
+  if (!confirm(`Restore "${name}" to v${v}? This creates a new version row with the same content as v${v}.`)) return;
+  try {
+    const r = await fetch(`/api/agents/${encodeURIComponent(name)}/revert/${v}`, { method: 'POST' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    toast(`Restored · ${name} ← v${v} (saved as v${(await r.json()).currentVersion})`);
+    closeHistory();
+    loadList();
+  } catch (e) {
+    toast('Restore failed: ' + e.message, true);
+  }
+}
+
+// ─────────── Toast ───────────
+let toastTimer = null;
+function toast(msg, isError) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' err' : '');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if ($('edit-modal').classList.contains('open'))    closeEdit();
+    if ($('create-modal').classList.contains('open'))  closeCreate();
+    if ($('history-modal').classList.contains('open')) closeHistory();
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+    if ($('edit-modal').classList.contains('open'))   { e.preventDefault(); saveOverride(); }
+    if ($('create-modal').classList.contains('open')) { e.preventDefault(); createAgent(); }
+  }
+});
+
+loadList();
+</script>
+</body>
+</html>

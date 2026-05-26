@@ -1,0 +1,144 @@
+spring:
+  application:
+    name: ai-pipeline-orchestrator
+
+  threads:
+    virtual:
+      enabled: true              # Servlet requests run on virtual threads (Java 21)
+
+  # ───────────────────────────────────────────────────────────────────────
+  # Audit persistence — H2 in FILE mode (survives restarts).
+  # Storage: ./data/audit.mv.db (relative to where you start the JVM).
+  # Swap to Postgres by changing url + driver-class-name + adding the JDBC
+  # driver dep; the JPA repo + entity stay identical.
+  # ───────────────────────────────────────────────────────────────────────
+  datasource:
+    url:               jdbc:h2:file:./data/audit;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: update           # auto-create/upgrade audit_event table on boot
+    show-sql: false              # flip true for debugging
+    properties:
+      hibernate.dialect: org.hibernate.dialect.H2Dialect
+      hibernate.jdbc.time_zone: UTC
+
+  h2:
+    console:
+      enabled: true              # http://localhost:8080/h2-console
+      path:    /h2-console       # JDBC URL to enter in the console: jdbc:h2:file:./data/audit
+
+  ai:
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}      # NEVER hardcode the key here — it lands in git history
+      chat:
+        options:
+          model: claude-sonnet-4-5-20250929
+          temperature: 0.0       # 0 → maximally deterministic tool selection (was 0.2)
+          max-tokens: 4096
+
+    mcp:
+      client:
+        # The starter auto-wires an MCP client per named connection below.
+        # Spring AI 1.0 supports HTTP/SSE transports via "sse:" connections.
+        sse:
+          connections:
+            github:
+              # IMPORTANT: this is the BASE URL — Spring AI appends `/sse` for the
+              # downstream stream and `/message` for upstream JSON-RPC. Putting
+              # `/sse` here produces a /sse/sse 404. Leave it as the host root.
+              url: ${MCP_GITHUB_URL:http://localhost:3000}
+        # LEAVE auto-injection ON. The MCP toolset auto-config registers each
+        # discovered tool with the ChatModel, which is what makes the tools
+        # callable from the system prompt. Per-agent tool restriction is done
+        # by the SAFETY_PREAMBLE prompt (model self-restraint) rather than by
+        # filtering the toolset client-side — Spring AI 1.0 does not provide
+        # a clean per-ChatClient override that avoids the duplicate-tool error.
+        toolcallback:
+          enabled: true
+
+server:
+  port: 8080
+
+# -----------------------------------------------------------------------------
+# Circuit breaker / kill switch.
+#   mcp.github.enabled=false  →  /v1/trigger returns 202, but no Claude
+#   call, no MCP connection — see McpClientConfig + PipelineEventService.
+# Backed by env var MCP_GITHUB_ENABLED.
+# -----------------------------------------------------------------------------
+mcp:
+  github:
+    enabled: ${MCP_GITHUB_ENABLED:true}
+    connection-name: github     # matches spring.ai.mcp.client.sse.connections.<name>
+    handshake-timeout-ms: 10000 # tolerate slow MCP server boot before declaring it dead
+
+# -----------------------------------------------------------------------------
+# Concurrency — how many pipeline events run in parallel at most.
+# GitHub REST returns 429 above ~80 calls/minute per token, and a single
+# Claude tool-call session can fire 10–20 GitHub calls. Two parallel
+# sessions is the safe ceiling.
+# -----------------------------------------------------------------------------
+orchestrator:
+  concurrency:
+    max-parallel: 2             # Semaphore permit count
+    acquire-timeout-ms: 30000   # webhook gives up if it can't enter within 30s
+
+# -----------------------------------------------------------------------------
+# Agent profiles — add a new agent by adding a new entry here +
+# dropping a Markdown file under classpath:/prompts/.
+# Each profile pins:
+#   • the system prompt
+#   • the subset of MCP tools the agent is allowed to call
+#   • the target repo + base branch + branch-name prefix it works against
+# -----------------------------------------------------------------------------
+agents:
+  profiles:
+
+    ci-failure-fixer:
+      prompt-file:  classpath:/prompts/ci-failure-fixer.md
+      allowed-tools:
+        - create_branch
+        - create_or_update_file
+        - create_pull_request
+        - add_item_to_project_v2
+        - get_file_contents
+        - list_branches
+      target-repo:  ${TARGET_REPO:satishlk/spring-ai-basic-application}
+      base-branch:  main
+      branch-prefix: ai/fix-
+
+    test-card-curator-remote:
+      prompt-file:  classpath:/prompts/test-card-curator-remote.md
+      allowed-tools:
+        - create_branch
+        - create_or_update_file
+        - create_pull_request
+        - get_file_contents
+      target-repo:  ${TARGET_REPO:satishlk/spring-ai-basic-application}
+      base-branch:  main
+      branch-prefix: ai/card-
+
+# -----------------------------------------------------------------------------
+# Observability
+# -----------------------------------------------------------------------------
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+  metrics:
+    tags:
+      application: ai-pipeline-orchestrator
+
+logging:
+  pattern:
+    level: "%5p [%X{correlationId:-},%X{eventType:-},%X{agent:-}]"
+  level:
+    com.example.orchestrator: INFO
+    org.springframework.ai: INFO
