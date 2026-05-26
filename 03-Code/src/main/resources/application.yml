@@ -117,3 +117,7 @@ gateway:
       - number: "8805105105105100"
         outcome: APPROVE
         label: "Custom BIN — always approves (88-prefix)"
+      - number: "6695105109809190"
+        outcome: DECLINE
+        reason: insufficient_funds
+        label: "Custom BIN — insufficient funds"
