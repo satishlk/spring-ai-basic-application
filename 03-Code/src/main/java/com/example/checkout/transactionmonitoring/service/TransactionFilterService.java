@@ -1,31 +1,33 @@
 package com.example.checkout.transactionmonitoring.service;
 
+import com.example.checkout.transactionmonitoring.web.TransactionFilterController.TransactionFilterRequest;
+import com.example.checkout.transactionmonitoring.web.TransactionFilterController.TransactionView;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import com.example.checkout.transactionmonitoring.web.TransactionFilterController.TransactionFilterRequest;
-import com.example.checkout.transactionmonitoring.web.TransactionFilterController.TransactionView;
-
 /**
  * Service for filtering and searching transactions based on multiple criteria.
- * Implements business logic for advanced transaction queries with pagination.
+ * Implements the business logic for advanced filtering as defined in PRD section 1.
+ * 
+ * Responsibilities:
+ * - Apply filter criteria with logical AND combination
+ * - Handle pagination and result set limits
+ * - Apply PII masking to all returned data
+ * - Ensure p99 latency < 500ms for result sets up to 10k transactions
  */
 @Service
-public class TransactionFilterService {
-
-    // Repository will be injected by Spring; implementation in follow-up
+public interface TransactionFilterService {
 
     /**
-     * Filter transactions based on provided criteria.
-     * All non-null filter fields are combined with logical AND.
-     * Results are paginated according to the Pageable parameter.
+     * Filter transactions by the provided criteria and return paginated results.
+     * All filter fields are optional and combined with logical AND.
+     * Results include PII masking by default (card numbers, emails).
      *
-     * @param request Filter criteria (status, error code, user ID, date range, amount range)
+     * @param request Filter criteria (all fields optional)
      * @param pageable Pagination parameters (page number, size, sort)
-     * @return Page of matching transactions with PII masked
+     * @return Paginated list of transactions matching all criteria, with total count
+     * @throws IllegalArgumentException if filter values are invalid
      */
-    public Page<TransactionView> filter(TransactionFilterRequest request, Pageable pageable) {
-        throw new UnsupportedOperationException("not yet implemented");
-    }
+    Page<TransactionView> filter(TransactionFilterRequest request, Pageable pageable);
 }
