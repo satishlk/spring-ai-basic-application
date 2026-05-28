@@ -1,8 +1,8 @@
 package com.example.checkout.transactionmonitoring.web;
 
-import com.example.checkout.transactionmonitoring.web.AdminActionController.DisputeRequest;
 import com.example.checkout.transactionmonitoring.web.AdminActionController.RefundRequest;
 import com.example.checkout.transactionmonitoring.web.AdminActionController.RefundType;
+import com.example.checkout.transactionmonitoring.web.AdminActionController.DisputeRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,8 +19,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Unit tests for AdminActionController.
- * Tests routing, request validation, and error handling.
- * Service-level logic is not yet implemented (throws UnsupportedOperationException).
+ * Tests routing, parameter binding, validation, and error handling.
+ * Service layer is mocked; business logic tests belong in service tests.
  */
 @WebMvcTest(AdminActionController.class)
 class AdminActionControllerTest {
@@ -32,7 +32,7 @@ class AdminActionControllerTest {
     private ObjectMapper objectMapper;
 
     @Test
-    @DisplayName("POST /transactions/{id}/refund with FULL refund returns 500 (not yet implemented)")
+    @DisplayName("POST /transactions/{id}/refund with valid FULL refund returns 500 (method not implemented)")
     void refund_fullRefund_throwsUnsupportedOperation() throws Exception {
         RefundRequest request = new RefundRequest(RefundType.FULL, null);
 
@@ -43,7 +43,7 @@ class AdminActionControllerTest {
     }
 
     @Test
-    @DisplayName("POST /transactions/{id}/refund with PARTIAL refund returns 500 (not yet implemented)")
+    @DisplayName("POST /transactions/{id}/refund with valid PARTIAL refund returns 500 (method not implemented)")
     void refund_partialRefund_throwsUnsupportedOperation() throws Exception {
         RefundRequest request = new RefundRequest(RefundType.PARTIAL, BigDecimal.valueOf(25.00));
 
@@ -54,7 +54,7 @@ class AdminActionControllerTest {
     }
 
     @Test
-    @DisplayName("POST /transactions/{id}/refund with null type returns 400 (validation)")
+    @DisplayName("POST /transactions/{id}/refund with null type returns 400 (validation works)")
     void refund_nullType_returnsBadRequest() throws Exception {
         RefundRequest request = new RefundRequest(null, null);
 
@@ -65,7 +65,7 @@ class AdminActionControllerTest {
     }
 
     @Test
-    @DisplayName("POST /transactions/{id}/refund with PARTIAL type but null amount returns 400 (validation)")
+    @DisplayName("POST /transactions/{id}/refund with PARTIAL type but null amount returns 400 (validation works)")
     void refund_partialWithoutAmount_returnsBadRequest() throws Exception {
         RefundRequest request = new RefundRequest(RefundType.PARTIAL, null);
 
@@ -76,16 +76,15 @@ class AdminActionControllerTest {
     }
 
     @Test
-    @DisplayName("POST /transactions/{id}/void returns 500 (not yet implemented)")
+    @DisplayName("POST /transactions/{id}/void returns 500 (method not implemented)")
     void voidTransaction_throwsUnsupportedOperation() throws Exception {
-        mockMvc.perform(post("/transactions/txn123/void")
-                        .contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/transactions/txn123/void"))
                 .andExpect(status().is5xxServerError());
     }
 
     @Test
-    @DisplayName("POST /transactions/{id}/dispute with valid reason returns 500 (not yet implemented)")
-    void dispute_withValidReason_throwsUnsupportedOperation() throws Exception {
+    @DisplayName("POST /transactions/{id}/dispute with valid reason returns 500 (method not implemented)")
+    void dispute_validReason_throwsUnsupportedOperation() throws Exception {
         DisputeRequest request = new DisputeRequest("Customer claims unauthorized charge");
 
         mockMvc.perform(post("/transactions/txn123/dispute")
@@ -95,7 +94,7 @@ class AdminActionControllerTest {
     }
 
     @Test
-    @DisplayName("POST /transactions/{id}/dispute with null reason returns 400 (validation)")
+    @DisplayName("POST /transactions/{id}/dispute with null reason returns 400 (validation works)")
     void dispute_nullReason_returnsBadRequest() throws Exception {
         DisputeRequest request = new DisputeRequest(null);
 
@@ -106,7 +105,7 @@ class AdminActionControllerTest {
     }
 
     @Test
-    @DisplayName("POST /transactions/{id}/dispute with blank reason returns 400 (validation)")
+    @DisplayName("POST /transactions/{id}/dispute with blank reason returns 400 (validation works)")
     void dispute_blankReason_returnsBadRequest() throws Exception {
         DisputeRequest request = new DisputeRequest("   ");
 
@@ -117,29 +116,57 @@ class AdminActionControllerTest {
     }
 
     @Test
-    @DisplayName("RefundRequest record can be instantiated")
-    void refundRequest_canBeCreated() {
-        RefundRequest request = new RefundRequest(RefundType.PARTIAL, BigDecimal.valueOf(10.00));
+    @DisplayName("Controller method refund throws UnsupportedOperationException")
+    void refund_methodNotImplemented() {
+        AdminActionController controller = new AdminActionController();
+        RefundRequest request = new RefundRequest(RefundType.FULL, null);
 
+        // Pinned by Phase 3 — replace with real assertions when method body lands.
+        assertThatThrownBy(() -> controller.refund("txn123", request))
+                .isInstanceOf(UnsupportedOperationException.class)
+                .hasMessageContaining("not yet implemented");
+    }
+
+    @Test
+    @DisplayName("Controller method voidTransaction throws UnsupportedOperationException")
+    void voidTransaction_methodNotImplemented() {
+        AdminActionController controller = new AdminActionController();
+
+        // Pinned by Phase 3 — replace with real assertions when method body lands.
+        assertThatThrownBy(() -> controller.voidTransaction("txn123"))
+                .isInstanceOf(UnsupportedOperationException.class)
+                .hasMessageContaining("not yet implemented");
+    }
+
+    @Test
+    @DisplayName("Controller method dispute throws UnsupportedOperationException")
+    void dispute_methodNotImplemented() {
+        AdminActionController controller = new AdminActionController();
+        DisputeRequest request = new DisputeRequest("Dispute reason");
+
+        // Pinned by Phase 3 — replace with real assertions when method body lands.
+        assertThatThrownBy(() -> controller.dispute("txn123", request))
+                .isInstanceOf(UnsupportedOperationException.class)
+                .hasMessageContaining("not yet implemented");
+    }
+
+    @Test
+    @DisplayName("RefundRequest record can be instantiated")
+    void refundRequest_instantiates() {
+        RefundRequest request = new RefundRequest(RefundType.PARTIAL, BigDecimal.valueOf(10.00));
+        
         assertThatThrownBy(() -> {
-            if (request == null) throw new IllegalStateException();
+            if (request.type() == null) throw new AssertionError();
         }).doesNotThrowAnyException();
     }
 
     @Test
     @DisplayName("DisputeRequest record can be instantiated")
-    void disputeRequest_canBeCreated() {
-        DisputeRequest request = new DisputeRequest("Fraud suspected");
-
+    void disputeRequest_instantiates() {
+        DisputeRequest request = new DisputeRequest("Reason text");
+        
         assertThatThrownBy(() -> {
-            if (request == null) throw new IllegalStateException();
+            if (request.reason() == null) throw new AssertionError();
         }).doesNotThrowAnyException();
     }
-
-    // Pinned by Phase 3 — when refund/void/dispute services are implemented, replace
-    // the above tests with real assertions that verify:
-    // - Correct HTTP 200 response for successful actions
-    // - Correct response body structure (RefundResponse, VoidResponse, DisputeResponse)
-    // - Correct audit log entries created
-    // - Correct idempotency behavior
 }
